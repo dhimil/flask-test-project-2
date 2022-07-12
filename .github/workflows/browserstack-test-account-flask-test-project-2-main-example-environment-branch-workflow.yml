@@ -1,0 +1,40 @@
+name: Architect main Branch Deployment
+
+on:
+  push:
+    branches:
+      - main
+
+env:
+  ARCHITECT_GENERATED: true
+  ARCHITECT_BRANCH: true
+  COMPONENT_FILE_PATH: architect.yml
+  ARCHITECT_ACCOUNT: browserstack-test-account
+  COMPONENT_NAME: flask-test-project-2
+  ENVIRONMENT_NAME: example-environment
+  BRANCH_NAME: main
+  ARCHITECT_CACHE_DIR: /tmp/workflow-cache
+  ARCHITECT_CACHE_NAME: architect-cache
+
+jobs:
+  architect_create_branch_deployments:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+        with:
+          ref: ${{ env.BRANCH_NAME }}
+      - uses: actions/setup-node@v2
+        with:
+          node-version: '14'
+      - uses: actions/cache@v3
+        with:
+          path: ${{ env.ARCHITECT_CACHE_DIR }}
+          key: ${{ env.ARCHITECT_CACHE_NAME }}
+      - name: Install Architect CLI
+        run: sudo npm install -g @architect-io/cli
+      - name: Login to Architect Cloud
+        run: architect login -e ${{ secrets.ARCHITECT_EMAIL }} -p ${{ secrets.ARCHITECT_PASSWORD }} # These secrets were created on your behalf
+      - name: Register component w/ Architect
+        run: architect register ${{ env.COMPONENT_FILE_PATH }} -t latest --cache-directory ${{ env.ARCHITECT_CACHE_DIR }}
+      - name: Deploy component
+        run: architect deploy --auto-approve -e ${{ env.ENVIRONMENT_NAME }} ${{ env.COMPONENT_NAME }}:latest
